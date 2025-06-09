@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html data-theme="pastel">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Messages App</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/daisyui@5"
+      rel="stylesheet"
+      type="text/css"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link
+      href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css"
+      rel="stylesheet"
+      type="text/css"
+    />
+  </head>
+  <body class="min-h-screen flex items-center justify-center bg-base-200">
+    <div class="card shadow-xl bg-base-100 p-8 w-full max-w-sm">
+      <h1 class="text-2xl font-bold text-center mb-6">Connexion au chat</h1>
+      <form id="chat-form" class="space-y-4">
+        <div class="grid gap-4 w-xs">
+          <label class="floating-label">
+            <input
+              type="text"
+              id="username"
+              placeholder="Nom d'utilisateur"
+              required
+              class="input input-lg"
+            />
+            <span>Nom d'utilisateur</span>
+          </label>
+          <label class="floating-label">
+            <input
+              type="text"
+              id="contact-person"
+              required
+              placeholder="Personne à contacter"
+              class="input input-lg"
+            />
+            <span>Personne à contacter</span>
+          </label>
+        </div>
+        <button type="submit" class="btn btn-lg btn-neutral w-full">
+          Chatter
+        </button>
+      </form>
+    </div>
+
+    <script type="module" src="../renderer.ts"></script>
+    <script>
+      document
+        .getElementById("chat-form")
+        .addEventListener("submit", function (e) {
+          e.preventDefault();
+          const username = document.getElementById("username").value.trim();
+          const contactPerson = document
+            .getElementById("contact-person")
+            .value.trim();
+          if (username !== "" && contactPerson != "") {
+            window.nativeAPI.goToChat(username, contactPerson);
+          }
+        });
+    </script>
+  </body>
+</html>

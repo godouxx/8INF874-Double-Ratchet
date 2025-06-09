@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html data-theme="pastel">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Messages App</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/daisyui@5"
+      rel="stylesheet"
+      type="text/css"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link
+      href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css"
+      rel="stylesheet"
+      type="text/css"
+    />
+  </head>
+  <body class="h-screen m-0 p-0">
+    <div class="flex h-full">
+      <!-- Left chat panel -->
+      <div class="w-2/6 border-r border-base-300 flex flex-col">
+        <!-- Chat Header -->
+        <div
+          class="p-4 border-b border-base-300 text-lg font-semibold bg-base-200"
+        >
+          <span class="text">Messages</span>
+        </div>
+
+        <!-- Chat messages -->
+        <div class="flex-1 overflow-y-auto p-4 space-y-4 bg-base-100">
+          <div class="chat chat-end">
+            <div class="chat-header">
+              <time class="text-xs opacity-50 ml-2">10:00</time>
+            </div>
+            <div class="chat-bubble chat-bubble-neutral">
+              Salut ! Comment ça va ?
+            </div>
+          </div>
+
+          <div class="chat chat-start">
+            <div class="chat-image avatar">
+              <div class="w-10 rounded-full">
+                <img class="contact-image" />
+              </div>
+            </div>
+            <div class="chat-header">
+              <span class="contact-name"></span>
+              <time class="text-xs opacity-50 ml-2">10:01</time>
+            </div>
+            <div class="chat-bubble">Très bien, et toi ?</div>
+          </div>
+        </div>
+
+        <!-- Chat input -->
+        <div class="p-4 border-t border-base-300 bg-base-200">
+          <div class="flex gap-2">
+            <input
+              type="text"
+              placeholder="Écrire un message..."
+              class="input input-bordered w-full"
+            />
+            <button class="btn btn-neutral">Envoyer</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right empty panel -->
+      <div class="flex-1 bg-base-100">
+        <div
+          class="p-4 border-b border-base-300 text-lg font-semibold bg-base-200"
+        >
+          <span class="text">Détails</span>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="../renderer.ts"></script>
+    <script>
+      window.nativeAPI.getContactName().then((name) => {
+        document.querySelector(".contact-name").textContent = name;
+        document.querySelector(
+          ".contact-image"
+        ).src = `https://ui-avatars.com/api/?name=${name[0]}&size=128`;
+      });
+    </script>
+  </body>
+</html>

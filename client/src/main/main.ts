@@ -8,9 +8,12 @@ if (started) {
   app.quit();
 }
 
+let mainWindow: BrowserWindow;
+let func: (name: string) => Promise<void>;
+
 const createWindow = () => {
   // Create the browser window.
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
     autoHideMenuBar: true,
@@ -21,15 +24,19 @@ const createWindow = () => {
 
   // and load the index.html of the app.
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
-    mainWindow.loadURL(`${MAIN_WINDOW_VITE_DEV_SERVER_URL}`);
+    mainWindow.loadURL(`${MAIN_WINDOW_VITE_DEV_SERVER_URL}/views/`);
+
     mainWindow.webContents.openDevTools();
+    registerIpcHandlers(mainWindow, `${MAIN_WINDOW_VITE_DEV_SERVER_URL}/views`);
   } else {
     mainWindow.loadFile(
       path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`)
     );
+    registerIpcHandlers(
+      mainWindow,
+      `file://${__dirname}/../renderer/${MAIN_WINDOW_VITE_NAME}`
+    );
   }
-
-  registerIpcHandlers();
 };
 
 // This method will be called when Electron has finished

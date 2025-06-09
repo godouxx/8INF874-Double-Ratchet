@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from "electron";
 
 contextBridge.exposeInMainWorld("nativeAPI", {
-  getPlatform: () => process.platform,
-  helloWorld: (arg: string) => ipcRenderer.invoke("hello-world", arg),
+  goToChat: (username: string, contactPerson: string) =>
+    ipcRenderer.invoke("go-to-chat", username, contactPerson),
+  getContactName: () => ipcRenderer.invoke("get-contact-name"),
 });

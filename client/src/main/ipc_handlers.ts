@@ -1,7 +1,14 @@
-import { ipcMain } from "electron";
+import { BrowserWindow, ipcMain } from "electron";
+import { userSession } from "./services/user_session";
 
-export function registerIpcHandlers() {
-  ipcMain.handle("hello-world", async (event, arg: string) => {
-    return `Hello, ${arg}! This is a response from the main process.`;
+export function registerIpcHandlers(mainWindow: BrowserWindow, base: string) {
+  ipcMain.handle("go-to-chat", (event, username, contactPerson) => {
+    userSession.username = username;
+    userSession.contactPerson = contactPerson;
+    mainWindow.loadURL(`${base}/chat.html`);
+  });
+
+  ipcMain.handle("get-contact-name", () => {
+    return userSession.contactPerson;
   });
 }

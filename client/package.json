@@ -12,10 +12,6 @@
     "lint": "eslint --ext .ts,.tsx ."
   },
   "keywords": [],
-  "author": {
-    "name": "Matthieu Flce",
-    "email": "flacelierematthieu@gmail.com"
-  },
   "license": "MIT",
   "pnpm": {
     "onlyBuiltDependencies": [

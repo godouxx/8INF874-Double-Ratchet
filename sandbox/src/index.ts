@@ -10,9 +10,9 @@ bob.initReceiver(sharedSecret);
 
 // Alice envoie un message
 const msg = alice.sendMessage("Salut Bob !");
-console.log("[Alice ➜ Bob] Envoi :", msg.ciphertext);
+// console.log("[Alice ➜ Bob] Envoi :", msg.ciphertext);
 const msg2 = alice.sendMessage("Comment ça va ?");
-console.log("[Alice ➜ Bob] Envoi :", msg2.ciphertext);
+// console.log("[Alice ➜ Bob] Envoi :", msg2.ciphertext);
 
 console.log("\n");
 
@@ -24,7 +24,7 @@ console.log("\n");
 
 // Bob envoie une réponse
 const response = bob.sendMessage("Salut Alice, ça va bien !");
-console.log("[Bob ➜ Alice] Envoi :", response.ciphertext);
+// console.log("[Bob ➜ Alice] Envoi :", response.ciphertext);
 
 console.log("\n");
 
@@ -35,14 +35,15 @@ console.log("[Alice 📨] Message reçu :", receivedResponse);
 console.log("\n");
 
 const aliceMessage = alice.sendMessage("Tu as reçu mon message ?");
-console.log("[Alice ➜ Bob] Envoi :", aliceMessage.ciphertext);
+// console.log("[Alice ➜ Bob] Envoi :", aliceMessage.ciphertext);
 const aliceMessage2 = alice.sendMessage("J'espère que tu vas bien !");
-console.log("[Alice ➜ Bob] Envoi :", aliceMessage2.ciphertext);
+// console.log("[Alice ➜ Bob] Envoi :", aliceMessage2.ciphertext);
 
 console.log("\n");
 
-console.log(bob.skippedMessageKeys);
 const skippedMessages = bob.receiveMessage(aliceMessage2);
 console.log("[Bob 📨] Messages sautés :", skippedMessages);
 const skippedMessages2 = bob.receiveMessage(msg);
 console.log("[Bob 📨] Messages sautés :", skippedMessages2);
+const skippedMessages3 = bob.receiveMessage(aliceMessage);
+console.log("[Bob 📨] Messages sautés :", skippedMessages3);

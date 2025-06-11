@@ -2,12 +2,19 @@
   "name": "server",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "index.ts",
+  "type": "module",
   "scripts": {
+    "start": "node --experimental-transform-types index.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@10.11.1"
+  "devDependencies": {
+    "@types/node": "^22.15.30"
+  },
+  "dependencies": {
+    "ws": "^8.18.2"
+  }
 }

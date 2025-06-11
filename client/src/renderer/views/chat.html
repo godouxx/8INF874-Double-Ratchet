@@ -18,7 +18,7 @@
   <body class="h-screen m-0 p-0">
     <div class="flex h-full">
       <!-- Left chat panel -->
-      <div class="w-2/6 border-r border-base-300 flex flex-col">
+      <div class="w-full lg:w-2/6 border-r border-base-300 flex flex-col">
         <!-- Chat Header -->
         <div
           class="p-4 border-b border-base-300 text-lg font-semibold bg-base-200"
@@ -28,27 +28,7 @@
 
         <!-- Chat messages -->
         <div class="flex-1 overflow-y-auto p-4 space-y-4 bg-base-100">
-          <div class="chat chat-end">
-            <div class="chat-header">
-              <time class="text-xs opacity-50 ml-2">10:00</time>
-            </div>
-            <div class="chat-bubble chat-bubble-neutral">
-              Salut ! Comment ça va ?
-            </div>
-          </div>
-
-          <div class="chat chat-start">
-            <div class="chat-image avatar">
-              <div class="w-10 rounded-full">
-                <img class="contact-image" />
-              </div>
-            </div>
-            <div class="chat-header">
-              <span class="contact-name"></span>
-              <time class="text-xs opacity-50 ml-2">10:01</time>
-            </div>
-            <div class="chat-bubble">Très bien, et toi ?</div>
-          </div>
+          <!-- Message display here -->
         </div>
 
         <!-- Chat input -->
@@ -65,7 +45,7 @@
       </div>
 
       <!-- Right empty panel -->
-      <div class="flex-1 bg-base-100">
+      <div class="hidden lg:flex flex-col flex-1 bg-base-100">
         <div
           class="p-4 border-b border-base-300 text-lg font-semibold bg-base-200"
         >
@@ -75,13 +55,78 @@
     </div>
 
     <script type="module" src="../renderer.ts"></script>
-    <script>
-      window.nativeAPI.getContactName().then((name) => {
-        document.querySelector(".contact-name").textContent = name;
-        document.querySelector(
-          ".contact-image"
-        ).src = `https://ui-avatars.com/api/?name=${name[0]}&size=128`;
+    <script type="module">
+      const input = document.querySelector("input[type=text]");
+      const button = document.querySelector("button");
+      const messagesContainer = document.querySelector(".overflow-y-auto");
+
+      let username = "";
+      let contactName = "";
+
+      async function init() {
+        username = await window.nativeAPI.getUsername();
+        contactName = await window.nativeAPI.getContactName();
+      }
+
+      button.addEventListener("click", sendMessage);
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") sendMessage();
       });
+
+      function sendMessage() {
+        const content = input.value.trim();
+        if (!content) return;
+
+        // Affiche localement le message
+        appendMessage("end", username, content);
+        input.value = "";
+
+        // Envoie via IPC au main process
+        window.nativeAPI.sendToContact(contactName, content);
+      }
+
+      function appendMessage(side, from, text) {
+        const wrapper = document.createElement("div");
+        wrapper.className = `chat chat-${side}`;
+
+        // Ajoute l'avatar seulement si c'est un message entrant
+        const avatarHtml =
+          side === "start"
+            ? `
+      <div class="chat-image avatar">
+        <div class="w-10 rounded-full">
+          <img src="https://ui-avatars.com/api/?name=${from[0]}&size=128" alt="${from}" />
+        </div>
+      </div>
+    `
+            : "";
+
+        wrapper.innerHTML = `
+    ${avatarHtml}
+    <div class="chat-header">
+      <span class="text-sm font-semibold">${from}</span>
+      <time class="text-xs opacity-50 ml-2">${new Date().toLocaleTimeString(
+        [],
+        {
+          hour: "2-digit",
+          minute: "2-digit",
+        }
+      )}</time>
+    </div>
+    <div class="chat-bubble ${
+      side === "end" ? "chat-bubble-neutral" : ""
+    }">${text}</div>
+  `;
+
+        messagesContainer.appendChild(wrapper);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      }
+
+      window.nativeAPI.onIncomingMessage((from, text) => {
+        appendMessage("start", contactName, text);
+      });
+
+      init();
     </script>
   </body>
 </html>

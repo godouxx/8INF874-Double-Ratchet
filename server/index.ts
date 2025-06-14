@@ -1,8 +1,11 @@
 import { WebSocketServer, WebSocket } from "ws";
+import { randomBytes } from "crypto";
 
 const wss = new WebSocketServer({ port: 8080 });
 
 const userSockets = new Map<string, WebSocket>();
+
+const sharedSecret = randomBytes(32); // Simulated shared secret for all users
 
 wss.on("connection", function connection(ws) {
   let currentUsername: string | null = null;
@@ -43,6 +46,8 @@ wss.on("connection", function connection(ws) {
           return;
         }
 
+        console.log(`Content from ${currentUsername} to ${to}: ${content}`);
+
         target.send(
           JSON.stringify({
             type: "message",
@@ -52,7 +57,52 @@ wss.on("connection", function connection(ws) {
         );
       }
 
-      // 3. Unknown message type
+      // 3. Send a public key to another user
+      else if (parsed.type === "publicKey") {
+        const { to, publicKey } = parsed;
+        const target = userSockets.get(to);
+        if (!currentUsername) {
+          ws.send(JSON.stringify({ error: "User not registered" }));
+          return;
+        }
+        if (!target) {
+          ws.send(JSON.stringify({ error: `User '${to}' not found` }));
+          return;
+        }
+
+        target.send(
+          JSON.stringify({
+            type: "publicKey",
+            from: currentUsername,
+            publicKey,
+            sharedSecret,
+          })
+        );
+      } else if (parsed.type === "firstMessage") {
+        const { to, content } = parsed;
+        const target = userSockets.get(to);
+        if (!currentUsername) {
+          ws.send(JSON.stringify({ error: "User not registered" }));
+          return;
+        }
+        if (!target) {
+          ws.send(JSON.stringify({ error: `User '${to}' not found` }));
+          return;
+        }
+
+        // Here you would typically encrypt the content using the shared secret
+        // For simplicity, we are sending it as is
+        target.send(
+          JSON.stringify({
+            type: "firstMessage",
+            from: currentUsername,
+            content,
+            sharedSecret,
+          })
+        );
+      }
+
+      // 4. Unknown message type
       else {
         ws.send(JSON.stringify({ error: "Unknown message type" }));
       }

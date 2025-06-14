@@ -84,10 +84,7 @@ export class User {
       Buffer.concat([header.toBuffer(), associatedData])
     );
 
-    return {
-      header,
-      ciphertext,
-    };
+    return new Message(header, ciphertext);
   }
 
   receiveMessage(msg: Message, associated_data = Buffer.alloc(0)) {
@@ -106,7 +103,7 @@ export class User {
       return plaintext;
     }
 
-    if (header.pk != this.publicKeyReceived) {
+    if (!this.publicKeyReceived || !header.pk.equals(this.publicKeyReceived)) {
       // If the public key has changed, we need to ratchet
       // the DH keys and update the root key and chain key
       // and store the skipped message keys

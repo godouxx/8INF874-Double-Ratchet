@@ -9,7 +9,6 @@ if (started) {
 }
 
 let mainWindow: BrowserWindow;
-let func: (name: string) => Promise<void>;
 
 const createWindow = () => {
   // Create the browser window.
@@ -26,7 +25,7 @@ const createWindow = () => {
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(`${MAIN_WINDOW_VITE_DEV_SERVER_URL}/views/`);
 
-    mainWindow.webContents.openDevTools();
+    // mainWindow.webContents.openDevTools();
     registerIpcHandlers(mainWindow, `${MAIN_WINDOW_VITE_DEV_SERVER_URL}/views`);
   } else {
     mainWindow.loadFile(

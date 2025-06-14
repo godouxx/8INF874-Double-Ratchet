@@ -1,4 +1,4 @@
-import { KeyObject } from "crypto";
+import { createPublicKey, KeyObject } from "crypto";
 
 const KEY_FORMAT_OPTIONS = {
   type: "spki",
@@ -20,20 +20,39 @@ class Header {
     this.n = n;
   }
 
-  toBuffer(): Buffer {
-    return Buffer.concat([
-      this.pk.export(KEY_FORMAT_OPTIONS),
-      Buffer.from(this.pn.toString()),
-      Buffer.from(this.n.toString()),
-    ]);
-  }
-
-  toJson(): object {
-    return {
-      pk: this.pk,
+  serialize(): string {
+    return JSON.stringify({
+      pk: this.pk.export(KEY_FORMAT_OPTIONS),
       pn: this.pn,
       n: this.n,
-    };
+    });
+  }
+
+  toBuffer(): Buffer {
+    return Buffer.from(this.serialize());
+  }
+
+  static deserialize(data: string): Header {
+    const parsed = JSON.parse(data);
+
+    if (
+      typeof parsed !== "object" ||
+      !parsed.pk ||
+      typeof parsed.pn !== "number" ||
+      typeof parsed.n !== "number"
+    ) {
+      throw new Error("Invalid header format");
+    }
+
+    const keyBuffer = Buffer.from(parsed.pk);
+
+    const pk = createPublicKey({
+      key: keyBuffer,
+      format: KEY_FORMAT_OPTIONS.format,
+      type: KEY_FORMAT_OPTIONS.type,
+    });
+
+    return new Header(pk, parsed.pn, parsed.n);
   }
 }
 

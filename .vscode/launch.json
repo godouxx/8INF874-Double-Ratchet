@@ -1,0 +1,32 @@
+{
+  "version": "0.2.0",
+  "compounds": [
+    {
+      "name": "Run All",
+      "configurations": ["Server", "Client 1", "Client 2"]
+    }
+  ],
+  "configurations": [
+    {
+      "name": "Client 1",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "pnpm start",
+      "cwd": "${workspaceFolder}/client"
+    },
+    {
+      "name": "Client 2",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "pnpm start",
+      "cwd": "${workspaceFolder}/client"
+    },
+    {
+      "name": "Server",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "pnpm start",
+      "cwd": "${workspaceFolder}/server"
+    }
+  ]
+}

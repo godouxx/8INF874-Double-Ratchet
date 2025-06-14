@@ -72,6 +72,7 @@ function encrypt(
   plaintext: string,
   associated_data: BinaryLike = Buffer.alloc(0)
 ) {
+  console.log(`Encrypting with key: ${key.toString("hex")}`);
   const hashLength = 32; // SHA-256 output size
   const hkdfSalt = Buffer.alloc(hashLength, 0); // zero-filled
   const totalLength = 32 + 32 + 16; // encryptionKey + authKey + IV = 80 bytes
@@ -113,6 +114,7 @@ function decrypt(
   ciphertext: Buffer,
   associatedData: BinaryLike = Buffer.alloc(0)
 ) {
+  console.log(`Decrypting with key: ${key.toString("hex")}`);
   const hashLength = 32; // SHA-256 output size
   const hkdfSalt = Buffer.alloc(hashLength, 0); // zero-filled
   const totalLength = 32 + 32 + 16; // encryptionKey + authKey + IV = 80 bytes
@@ -130,10 +132,10 @@ function decrypt(
   const iv = derived.slice(64, 80);
 
   // Verify HMAC tag
-  const tag = ciphertext.slice(-32);
+  const tag = ciphertext.subarray(-32);
   const hmac = createHmac("sha256", Buffer.from(authKey));
   hmac.update(associatedData);
-  hmac.update(ciphertext.slice(0, -32));
+  hmac.update(ciphertext.subarray(0, -32));
 
   if (!hmac.digest().equals(tag)) {
     throw new Error("Invalid HMAC tag");

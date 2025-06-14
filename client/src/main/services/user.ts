@@ -6,7 +6,7 @@ import {
   KDFChainKey,
   KDFRootKey,
 } from "../helpers/double_ratchet";
-import { KeyObject } from "crypto";
+import { createPublicKey, KeyObject } from "crypto";
 import { Header } from "../types/header";
 import { Message } from "../types/message";
 
@@ -44,13 +44,38 @@ export class User {
     this.skippedMessageKeys = new Map();
   }
 
-  initSender(sharedSecret: Buffer, remotePubKey: KeyObject) {
+  exportPublicKey(): string {
+    return this.DH.publicKey
+      .export({ type: "spki", format: "pem" })
+      .toString("utf-8");
+  }
+
+  importPublicKey(publicKey: string): KeyObject {
+    const publicKeyBuffer = Buffer.from(publicKey, "utf-8");
+    const publicKeyObj = createPublicKey({
+      key: publicKeyBuffer,
+      format: "pem",
+      type: "spki",
+    });
+    if (!publicKeyObj || publicKeyObj.type !== "public") {
+      throw new Error("Invalid public key provided.");
+    }
+
+    return publicKeyObj;
+  }
+
+  isInitialized(): boolean {
+    return this.rootKey !== null;
+  }
+
+  initSender(sharedSecret: Buffer, remotePubKey: string) {
     this.rootKey = sharedSecret;
-    this.publicKeyReceived = remotePubKey;
+
+    this.publicKeyReceived = this.importPublicKey(remotePubKey);
 
     const dhSharedSecret = calculateSharedSecret(
       this.DH.privateKey,
-      remotePubKey
+      this.publicKeyReceived
     );
     const { rootKey, chainKey } = KDFRootKey(this.rootKey, dhSharedSecret);
 
@@ -84,10 +109,7 @@ export class User {
       Buffer.concat([header.toBuffer(), associatedData])
     );
 
-    return {
-      header,
-      ciphertext,
-    };
+    return new Message(header, ciphertext);
   }
 
   receiveMessage(msg: Message, associated_data = Buffer.alloc(0)) {
@@ -106,7 +128,7 @@ export class User {
       return plaintext;
     }
 
-    if (header.pk != this.publicKeyReceived) {
+    if (!this.publicKeyReceived || !header.pk.equals(this.publicKeyReceived)) {
       // If the public key has changed, we need to ratchet
       // the DH keys and update the root key and chain key
       // and store the skipped message keys
@@ -118,6 +140,7 @@ export class User {
     const { chainKey, messageKey } = KDFChainKey(this.chainKeyRecv!);
     this.chainKeyRecv = chainKey;
     this.receivingCount++;
+
     return decrypt(
       messageKey,
       ciphertext,
@@ -168,19 +191,21 @@ export class User {
 
     this.publicKeyReceived = header.pk;
 
-    let { rootKey, chainKey } = KDFRootKey(
+    const { rootKey, chainKey } = KDFRootKey(
       this.rootKey!,
       calculateSharedSecret(this.DH.privateKey, header.pk)
     );
+    console.log("First DH ratchet with new public key");
     this.rootKey = rootKey;
     this.chainKeyRecv = chainKey;
     this.DH = generateDHKeyPair(); // Generate new DH keys for future messages
-    let { rootKey, chainKey } = KDFRootKey(
+    const { rootKey: newRootKey, chainKey: newChainKey } = KDFRootKey(
       this.rootKey!,
       calculateSharedSecret(this.DH.privateKey, header.pk)
     );
-    this.rootKey = rootKey;
-    this.chainKeySend = chainKey;
+    console.log("New root key and chain key after DH ratchet:");
+    this.rootKey = newRootKey;
+    this.chainKeySend = newChainKey;
   }
 
   #keyMap(publicKey: KeyObject, index: number): string {

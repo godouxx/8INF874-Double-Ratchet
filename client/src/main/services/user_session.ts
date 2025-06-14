@@ -1,10 +1,13 @@
 import WebSocket from "ws";
+import { User } from "./user";
+import { Message } from "../types/message";
 
 class UserSession {
   #username = "";
   #contactPerson = "";
   #ws: WebSocket | null = null;
   #serverUrl = "ws://localhost:8080";
+  #user: User;
   #messageListener: (from: string, content: string) => void;
 
   set username(username: string) {
@@ -13,6 +16,11 @@ class UserSession {
     }
 
     this.#username = username;
+    try {
+      this.#user = new User(this.#username);
+    } catch (err) {
+      console.log(`Failed to initialize user`);
+    }
     this.#connectWebSocket();
   }
 
@@ -26,6 +34,7 @@ class UserSession {
     }
 
     this.#contactPerson = contact;
+    this.#connectToUser();
   }
 
   get contactPerson() {
@@ -56,7 +65,23 @@ class UserSession {
         const msg = JSON.parse(data.toString());
 
         if (msg.type === "message" && msg.from && msg.content) {
-          this.#messageListener(msg.from, msg.content);
+          const message = Message.deserialize(msg.content);
+
+          const plaintext = this.#user.receiveMessage(message);
+
+          this.#messageListener(msg.from, plaintext);
+        } else if (msg.type === "publicKey") {
+          const sharedSecret = Buffer.from(msg.sharedSecret);
+
+          this.#user.initSender(sharedSecret, msg.publicKey);
+        } else if (msg.type === "firstMessage") {
+          const message = Message.deserialize(msg.content);
+
+          const sharedSecret = Buffer.from(msg.sharedSecret);
+          this.#user.initReceiver(sharedSecret);
+
+          const plaintext = this.#user.receiveMessage(message);
+          console.log(`First message from ${msg.from}: ${plaintext}`);
         } else {
           console.log("Server message:", msg);
         }
@@ -86,16 +111,64 @@ class UserSession {
     }
   }
 
+  #connectToUser() {
+    if (!this.#ws || this.#ws.readyState !== WebSocket.OPEN) {
+      throw new Error("WebSocket not connected");
+    }
+
+    if (!this.#contactPerson || this.#contactPerson.trim() === "") {
+      throw new Error("Contact person cannot be empty");
+    }
+
+    if (!this.#user.isInitialized()) {
+      console.log(`Sending public key to ${this.#contactPerson}...`);
+      this.#ws.send(
+        JSON.stringify({
+          type: "publicKey",
+          to: this.#contactPerson,
+          publicKey: this.#user.exportPublicKey(),
+        })
+      );
+    } else {
+      console.log(`Connecting to ${this.#contactPerson}...`);
+      this.sendFirstMessage(
+        `Hello ${this.#contactPerson}, I am ${this.#username}. Let's chat!`
+      );
+    }
+  }
+
   sendMessage(to: string, content: string) {
     if (!this.#ws || this.#ws.readyState !== WebSocket.OPEN) {
       throw new Error("WebSocket not connected");
     }
 
+    const encryptedMessage = this.#user.sendMessage(content);
+
     this.#ws.send(
       JSON.stringify({
         type: "message",
         to,
-        content,
+        content: encryptedMessage.serialize(),
+      })
+    );
+  }
+
+  sendFirstMessage(content: string) {
+    if (!this.#ws || this.#ws.readyState !== WebSocket.OPEN) {
+      throw new Error("WebSocket not connected");
+    }
+
+    if (!this.#contactPerson || this.#contactPerson.trim() === "") {
+      throw new Error("Contact person cannot be empty");
+    }
+
+    const encryptedMessage = this.#user.sendMessage(content);
+
+    this.#ws.send(
+      JSON.stringify({
+        type: "firstMessage",
+        to: this.#contactPerson,
+        content: encryptedMessage.serialize(),
       })
     );
   }

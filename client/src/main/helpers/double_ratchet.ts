@@ -9,12 +9,16 @@ import {
   KeyObject,
 } from "crypto";
 
-const DH_TYPE = "x448";
+// const DH_TYPE = "x448";
+const DH_TYPE = "prime256v1";
+// On utilise ici la prime256v1 pour la compatibilité avec electron, qui ne supporte pas x448.
 const ROOT_KEY_INFO = Buffer.from("DoubleRatchetRootKey", "utf-8");
 const MESSAGE_KEY_INFO = Buffer.from("DoubleRatchetMessageKey", "utf-8");
 
 function generateDHKeyPair() {
-  const { publicKey, privateKey } = generateKeyPairSync(DH_TYPE);
+  const { publicKey, privateKey } = generateKeyPairSync("ec", {
+    namedCurve: DH_TYPE,
+  });
   return { publicKey, privateKey };
 }
 
@@ -36,6 +40,7 @@ function calculateSharedSecret(
 function KDFRootKey(rootKey: Buffer, sharedSecret: Buffer) {
   const length = 64; // 32 bytes for rootKey, 32 bytes for chainKey
 
+  console.log(`DEBUG ${rootKey} ${sharedSecret}`);
   const derived = hkdfSync(
     "sha256",
     sharedSecret,
@@ -130,10 +135,10 @@ function decrypt(
   const iv = derived.slice(64, 80);
 
   // Verify HMAC tag
-  const tag = ciphertext.slice(-32);
+  const tag = ciphertext.subarray(-32);
   const hmac = createHmac("sha256", Buffer.from(authKey));
   hmac.update(associatedData);
-  hmac.update(ciphertext.slice(0, -32));
+  hmac.update(ciphertext.subarray(0, -32));
 
   if (!hmac.digest().equals(tag)) {
     throw new Error("Invalid HMAC tag");

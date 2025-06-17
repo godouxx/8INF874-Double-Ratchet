@@ -68,14 +68,13 @@ export class User {
     return this.rootKey !== null;
   }
 
-  initSender(sharedSecret: Buffer, remotePubKey: string) {
-    this.rootKey = sharedSecret;
-
-    this.publicKeyReceived = this.importPublicKey(remotePubKey);
+  initSender(masterKey: Buffer, remotePubKey: KeyObject) {
+    this.rootKey = masterKey;
+    this.publicKeyReceived = remotePubKey;
 
     const dhSharedSecret = calculateSharedSecret(
       this.DH.privateKey,
-      this.publicKeyReceived
+      remotePubKey
     );
     const { rootKey, chainKey } = KDFRootKey(this.rootKey, dhSharedSecret);
 
@@ -83,8 +82,8 @@ export class User {
     this.chainKeySend = chainKey;
   }
 
-  initReceiver(sharedSecret: Buffer) {
-    this.rootKey = sharedSecret;
+  initReceiver(masterKey: Buffer) {
+    this.rootKey = masterKey;
   }
 
   sendMessage(plaintext: string, associatedData = Buffer.alloc(0)): Message {

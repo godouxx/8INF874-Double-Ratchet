@@ -38,9 +38,11 @@ function calculateSharedSecret(
 }
 
 function KDFRootKey(rootKey: Buffer, sharedSecret: Buffer) {
-  const length = 64; // 32 bytes for rootKey, 32 bytes for chainKey
+  if (!rootKey || !sharedSecret) {
+    throw new Error("rootKey or sharedSecret is null or undefined");
+  }
 
-  console.log(`DEBUG ${rootKey} ${sharedSecret}`);
+  const length = 64;
   const derived = hkdfSync(
     "sha256",
     sharedSecret,

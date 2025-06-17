@@ -1,11 +1,20 @@
 import { WebSocketServer, WebSocket } from "ws";
-import { randomBytes } from "crypto";
+
 
 const wss = new WebSocketServer({ port: 8080 });
 
 const userSockets = new Map<string, WebSocket>();
 
-const sharedSecret = randomBytes(32); // Simulated shared secret for all users
+interface PublicBundle {
+  ik: string;
+  spk: string;
+  spkSig: string;
+  opk?: string;
+}
+
+const userBundles = new Map<string, { bundle: PublicBundle, dhPublicKey: any }>();
+
+// const sharedSecret = randomBytes(32); // Simulated shared secret for all users
 
 wss.on("connection", function connection(ws) {
   let currentUsername: string | null = null;
@@ -16,19 +25,61 @@ wss.on("connection", function connection(ws) {
     try {
       const parsed = JSON.parse(data.toString());
 
-      // 1.Register a new user
+      // 1.Register a new user (username + X3DH key bundle)
       if (parsed.type === "register") {
-        const { username } = parsed;
-        if (typeof username !== "string") {
-          ws.send(JSON.stringify({ error: "Invalid username" }));
+        const { username, bundle, dhPublicKey } = parsed;
+        if (typeof username !== "string" || !bundle || typeof bundle !== "object") {
+          ws.send(JSON.stringify({ error: "Invalid registration data" }));
           return;
         }
 
         currentUsername = username;
         userSockets.set(username, ws);
-        ws.send(JSON.stringify({ type: "registered", username }));
+        userBundles.set(username, { bundle, dhPublicKey });
 
-        console.log(`User registered: ${username}`);
+        ws.send(JSON.stringify({ type: "registered", username }));
+        console.log(`User registered: ${username} with X3DH bundle`);
+      }
+
+      //2. envoi du bundle d'un utilisateur
+      else if (parsed.type === "getBundle") {
+        const { username } = parsed;
+        const bundle = userBundles.get(username)?.bundle;
+
+        if (!bundle) {
+          ws.send(JSON.stringify({ error: "No bundle found for " + username }));
+          return;
+        }
+
+        ws.send(JSON.stringify({
+          type: "bundleResponse",
+          from: username,
+          bundle
+        }));
+      }
+
+      // 3. envoi des données de partage de secret
+      else if (parsed.type === "secretSharing") {
+        const { to, sharedSecretData } = parsed;
+        const target = userSockets.get(to);
+        if (!currentUsername) {
+          ws.send(JSON.stringify({ error: "User not registered" }));
+          return;
+        }
+        if (!target) {
+          ws.send(JSON.stringify({ error: `User '${to}' not found` }));
+          return;
+        }
+
+        const publicKey = userBundles.get(currentUsername)?.dhPublicKey
+        target.send(
+          JSON.stringify({
+            type: "secretSharing",
+            from: currentUsername,
+            sharedSecretData,
+            publicKey
+          })
+        );
       }
 
       // 2. Send a message to another user
@@ -53,51 +104,6 @@ wss.on("connection", function connection(ws) {
             type: "message",
             from: currentUsername,
             content,
-          })
-        );
-      }
-
-      // 3. Send a public key to another user
-      else if (parsed.type === "publicKey") {
-        const { to, publicKey } = parsed;
-        const target = userSockets.get(to);
-        if (!currentUsername) {
-          ws.send(JSON.stringify({ error: "User not registered" }));
-          return;
-        }
-        if (!target) {
-          ws.send(JSON.stringify({ error: `User '${to}' not found` }));
-          return;
-        }
-
-        target.send(
-          JSON.stringify({
-            type: "publicKey",
-            from: currentUsername,
-            publicKey,
-            sharedSecret,
-          })
-        );
-      } else if (parsed.type === "firstMessage") {
-        const { to, content } = parsed;
-        const target = userSockets.get(to);
-        if (!currentUsername) {
-          ws.send(JSON.stringify({ error: "User not registered" }));
-          return;
-        }
-        if (!target) {
-          ws.send(JSON.stringify({ error: `User '${to}' not found` }));
-          return;
-        }
-
-        // Here you would typically encrypt the content using the shared secret
-        // For simplicity, we are sending it as is
-        target.send(
-          JSON.stringify({
-            type: "firstMessage",
-            from: currentUsername,
-            content,
-            sharedSecret,
           })
         );
       }

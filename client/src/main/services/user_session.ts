@@ -1,7 +1,7 @@
 import WebSocket from "ws";
 import { User } from "./user";
 import { Message } from "../types/message";
-import { randomBytes, createCipheriv, createDecipheriv, KeyPairKeyObjectResult, createPublicKey, KeyObject, createPrivateKey } from "crypto";
+import { randomBytes, createCipheriv, createDecipheriv, KeyPairKeyObjectResult, createPublicKey, KeyObject, createPrivateKey, verify } from "crypto";
 import {
   generateSignedPreKey,
   generateKeyPair,
@@ -110,8 +110,13 @@ class UserSession {
           this.#user.initReceiver(Buffer.from(this.#masterKey!));
 
           //calculer associated data
-          const { ciphertext, iv, tag } = computeADAndEncrypt(this.#localKeyMaterial!.ik.publicKey, ikRemote, masterKey);
+          const AD = computeAD(this.#localKeyMaterial!.ik.publicKey, ikRemote);
+          const { ciphertext, iv, tag } = encryptAD(AD, masterKey);
           
+          // verification des clés
+          const verifAD = new Uint8Array(await crypto.subtle.digest("SHA-256", AD))
+
+
           const sharedSecretData = {
             publicKey: keyObjectToBase64(this.#localKeyMaterial!.ik.publicKey),
             ephemeralPublicKey: keyObjectToBase64(ephemeralKeyPair.publicKey),
@@ -155,6 +160,8 @@ class UserSession {
             this.#localKeyMaterial!.ik.publicKey,
           );
           const isValid = decryptAndVerifyAD(Buffer.from(iv), Buffer.from(ciphertext), Buffer.from(tag), masterKey, expectedAD);
+          // verification des clés
+          const verifAD = new Uint8Array(await crypto.subtle.digest("SHA-256", expectedAD))
 
           if (!isValid) {
             console.error("AD mismatch! Decryption failed or keys do not match.");
@@ -337,16 +344,14 @@ export function computeAD(IKA: KeyObject, IKB: KeyObject): Uint8Array {
 }
 
 // Chiffre AD avec AES-GCM en utilisant la masterKey
-export function computeADAndEncrypt(
-  IKA: KeyObject,
-  IKB: KeyObject,
+export function encryptAD(
+  ad: Uint8Array,
   masterKey: Buffer
 ): { iv: Buffer; ciphertext: Buffer; tag: Buffer } {
   if (masterKey.length !== 32) {
     throw new Error("Master key must be 32 bytes for AES-256-GCM");
   }
 
-  const ad = computeAD(IKA, IKB); // ← ceci est ce que tu veux chiffrer
   const iv = randomBytes(12); // 96-bit IV
 
   const cipher = createCipheriv('aes-256-gcm', masterKey, iv);
